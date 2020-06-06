@@ -12,6 +12,8 @@ export interface Command {
     parse: (string | CustomParser)[];
 }
 
+export type ErrorHandler = (message: Message, error: any) => string;
+
 export type DefaultCommandHandler = (message: Message, commands: Command[]) => any;
 
 export default class CommandParser {
@@ -19,6 +21,7 @@ export default class CommandParser {
     private prefix : string;
     private split : string;
     private defaults : DefaultCommandHandler[];
+    private errorHandler : ErrorHandler;
 
     constructor (prefix: string, split : string = ' ', commands: Command[] = [], defaults: DefaultCommandHandler[] = []) {
         this.commands = commands;
@@ -30,6 +33,13 @@ export default class CommandParser {
         this.parseArguments = this.parseArguments.bind(this);
         this.call = this.call.bind(this);
         this.process = this.process.bind(this);
+        this.errorHandler = (function (message : Message, error : any) {
+            return `<@${message.author.id}> Error: ${error.message ?? 'Unknown error.'}`;
+        }).bind(this);
+    }
+
+    public error (handler: ErrorHandler) {
+        this.errorHandler = handler.bind(this);
     }
 
     public add(command : Command) {
@@ -45,12 +55,12 @@ export default class CommandParser {
         let arg_i = offset;
 
         for (let i = 0; i < parse.length; i++) {
-            assert(arg_i < argv.length, 'Invalid amount of arguments');
+            assert(arg_i < argv.length, `Invalid amount of arguments: Expected ${parse.length} got ${parsed_args.length}.`);
             const parse_type = parse[i];
             // Custom parser
             if (typeof parse_type === 'function') {
                 const parsed = parse_type(argv[arg_i]);
-                assert(parsed !== undefined, 'Could not parse argument using custom parser.'); 
+                assert(parsed !== undefined, `Could not parse argument ${argv[arg_i]} using custom parser.`); 
                 parsed_args.push(parsed);
                 arg_i++;
                 continue;
@@ -85,7 +95,7 @@ export default class CommandParser {
                     case 'number':
                         {
                             const parsed: number = parseFloat(argv[arg_i]);
-                            assert(!Number.isNaN(parsed), 'Invalid number in argument. ' + argv[arg_i]);
+                            assert(!Number.isNaN(parsed), 'Invalid number in argument: ' + argv[arg_i]);
                             parsed_args.push(parsed);
                             arg_i++;
                         }
@@ -119,17 +129,20 @@ export default class CommandParser {
             if (ret instanceof Promise) {
                 return ret;
             } else return Promise.resolve();
-        }));
+        })); 
     }
 
     public async process (message : Message) {
         const argv = message.content.split(this.split);
         const argc = argv.length;
+        try {
+            if (argv[0] !== this.prefix) return;
 
-        if (argv[0] !== this.prefix) return;
+            assert(argc > 1, 'Too few arguments.');
 
-        assert(argc > 1, 'Too few arguments');
-
-        return await this.call(argv[1], message, argv);
+            return await this.call(argv[1], message, argv);   
+        } catch (error) {
+            message.channel.send(this.errorHandler(message, error));
+        }
     }
 }

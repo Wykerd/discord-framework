@@ -17,7 +17,6 @@ export default class DiscordBot {
     public use (name: string | string[], description: string, handler: CommandHandler, parse: (string | CustomParser)[]) : void;
 
     public use () : void {
-        console.log(this.parser);
         if ((arguments.length > 2) && ((typeof arguments[0] === 'string') || (Array.isArray(arguments[0]) && typeof arguments[0][0] === 'string')) ) {
             if (arguments.length === 3 && typeof arguments[1] === 'function' && Array.isArray(arguments[2])) {
                 return this.parser.add({

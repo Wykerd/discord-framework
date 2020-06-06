@@ -45,7 +45,7 @@ export default class CommandParser {
         let arg_i = offset;
 
         for (let i = 0; i < parse.length; i++) {
-            // assert(arg_i > argv.length, 'Invalid amount of arguments');
+            assert(arg_i < argv.length, 'Invalid amount of arguments');
             const parse_type = parse[i];
             // Custom parser
             if (typeof parse_type === 'function') {
@@ -67,9 +67,9 @@ export default class CommandParser {
                                 for (let i = arg_i; i < argv.length; i++) {
                                     const str = argv[i];
                                     if (str.charAt(str.length - 1) === escape) {
-                                        parsed = argv.splice(arg_i, i - arg_i + 1).join(this.split);
+                                        parsed = [...argv].splice(arg_i, i - arg_i + 1).join(this.split);
                                         parsed = parsed.substr(1, parsed.length - 2);
-                                        arg_i = i - 1;
+                                        arg_i = i;
                                         break;
                                     }
                                 }
@@ -97,6 +97,10 @@ export default class CommandParser {
             throw new Error('Invalid parser spesified.');
         }
 
+        if (arg_i < argv.length) {
+            parsed_args.push(...argv.splice(arg_i, argv.length));
+        }
+
         return parsed_args;
     }
 
@@ -109,8 +113,6 @@ export default class CommandParser {
             def(message, commands);
         });
 
-        console.log('OK HERE')
-
         await Promise.all(commands.map<Promise<any>>(command => {
             const args = this.parseArguments(argv, command.parse);
             const ret = command.handler(message, args);
@@ -121,20 +123,10 @@ export default class CommandParser {
     }
 
     public async process (message : Message) {
-        console.log(this);
-        console.log('Processing');
         const argv = message.content.split(this.split);
         const argc = argv.length;
 
-        console.log(this.split);
-
-        console.log(argv);
-
-        console.log(this.prefix);
-
-        if (argv[0] !== this.prefix) return console.log('EXITING');
-
-        console.log('Oof');
+        if (argv[0] !== this.prefix) return;
 
         assert(argc > 1, 'Too few arguments');
 

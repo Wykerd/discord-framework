@@ -1,7 +1,7 @@
 import { Message } from 'discord.js'
 import assert from 'assert'
 
-export type CommandHandler = (message: Message, args : string[]) => any;
+export type CommandHandler = (message: Message, args : string[]) => Promise<boolean> | boolean;
 
 export type CustomParser = (value: string) => any; 
 
@@ -128,13 +128,16 @@ export default class CommandParser {
             }
         }
 
-        await Promise.all(commands.map<Promise<any>>(command => {
-            const args = this.parseArguments(argv, command.parse);
-            const ret = command.handler(message, args);
-            if (ret instanceof Promise) {
-                return ret;
-            } else return Promise.resolve();
-        })); 
+        for (const com_key in commands) {
+            if (commands.hasOwnProperty(com_key)) {
+                const command = commands[com_key];
+                const args = this.parseArguments(argv, command.parse);
+                const ret = command.handler(message, args);
+                if (ret instanceof Promise) {
+                    if (await ret) return;
+                } else if (!ret) return;
+            }
+        }
     }
 
     public async process (message : Message) {

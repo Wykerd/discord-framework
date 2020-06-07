@@ -14,7 +14,7 @@ export interface Command {
 
 export type ErrorHandler = (message: Message, error: any) => string;
 
-export type DefaultCommandHandler = (message: Message, commands: Command[]) => any;
+export type DefaultCommandHandler = (message: Message, commands: Command[]) => Promise<boolean> | boolean;
 
 export default class CommandParser {
     private commands : Command[];
@@ -119,9 +119,14 @@ export default class CommandParser {
 
         if (!commands) throw new ReferenceError('Command not found.');
 
-        this.defaults.forEach(def => {
-            def(message, commands);
-        });
+        for (const def_key in this.defaults) {
+            if (this.defaults.hasOwnProperty(def_key)) {
+                const def = this.defaults[def_key];
+                let ret = def(message, commands);
+                if (ret instanceof Promise) ret = await ret;
+                if (!ret) return;
+            }
+        }
 
         await Promise.all(commands.map<Promise<any>>(command => {
             const args = this.parseArguments(argv, command.parse);

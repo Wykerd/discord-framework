@@ -1,5 +1,6 @@
 import { Client } from "discord.js";
-import CommandParser, { CommandHandler, CustomParser, DefaultCommandHandler } from "./command";
+import CommandParser, { CommandHandler, CustomParser, DefaultCommandHandler, ConverseHelp } from "./command";
+import { loadModel } from './nlp'
 
 export default class DiscordBot {
     private client : Client;
@@ -34,8 +35,30 @@ export default class DiscordBot {
                 });
             }
         } else if (arguments.length === 1 && typeof arguments[0] === 'function') {
-            this.parser.addDefault(arguments[0]);
+            return this.parser.addDefault(arguments[0]);
         }
         throw new TypeError('Invalid arguments');
+    }
+    public converse (intent: string | string[], handler: CommandHandler) : void;
+    public converse (intent: string | string[], help: ConverseHelp, handler: CommandHandler) : void;
+
+    public converse () : void {
+        if (arguments.length === 2 && ((typeof arguments[0] === 'string') || (Array.isArray(arguments[0]))) && typeof arguments[1] === 'function') {
+            return this.parser.addConverse({
+                handler: arguments[1],
+                intent: arguments[0]
+            });
+        } else if (arguments.length === 2 && ((typeof arguments[0] === 'string') || (Array.isArray(arguments[0]))) && typeof arguments[2] === 'function' && typeof arguments[1] === 'object') {
+            return this.parser.addConverse({
+                handler: arguments[2],
+                help: arguments[1],
+                intent: arguments[0]
+            });
+        }
+        throw new TypeError('Invalid arguments');
+    }
+
+    public model (...args: string[]) {
+        return loadModel(...args);
     }
 }

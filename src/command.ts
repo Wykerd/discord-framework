@@ -2,7 +2,7 @@ import { Message } from 'discord.js'
 import assert from 'assert'
 import { processMessage } from './nlp';
 
-export type CommandHandler = (message: Message, args : any[]) => Promise<boolean> | boolean;
+export type CommandHandler = (message: Message, args : any[], converse_result?: any) => Promise<boolean> | boolean;
 
 export type CustomParser = (value: string) => any; 
 
@@ -188,7 +188,7 @@ export default class CommandParser {
         }
 
         for (const command of commands) {
-            const ret = command.handler(message, res.entities);
+            const ret = command.handler(message, res.entities, res);
             if (ret instanceof Promise) {
                 if (await ret) return;
             } else if (!ret) return;
@@ -196,6 +196,7 @@ export default class CommandParser {
     }
 
     public async process (message : Message) {
+        if (message.author.bot) return;
         const argv = message.content.split(this.split);
         const argc = argv.length;
         try {
@@ -207,7 +208,7 @@ export default class CommandParser {
 
             if (!this.nlp.must_include) return await this.conversCall(message);
 
-            for (const word in this.nlp.must_include) {
+            for (const word of this.nlp.must_include) {
                 if (message.content.toUpperCase().includes(word.toUpperCase())) return await this.conversCall(message);
             }
         } catch (error) {

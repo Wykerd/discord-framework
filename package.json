@@ -9,7 +9,7 @@
     "typescript": "^3.9.3"
   },
   "name": "@wykerd/discord-framework",
-  "version": "1.1.0",
+  "version": "1.1.5",
   "description": "Framework for making discord bots",
   "main": "lib/index.js",
   "directories": {
